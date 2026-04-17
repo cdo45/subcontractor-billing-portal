@@ -1,51 +1,82 @@
-import jwt from "jsonwebtoken";
-import { NextRequest } from "next/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "./db";
-
-const JWT_SECRET = process.env.JWT_SECRET || "local_dev_secret_do_not_use_in_prod";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 export type Role = "admin" | "pm" | "subcontractor";
 
-export interface TokenPayload {
-  userId: string;
+export interface ResolvedSessionUser {
+  id: string; // Prisma User.id (used by all existing relations)
+  clerkId: string;
+  email: string;
+  name: string;
   role: Role;
+  companyName: string | null;
 }
 
-export function signToken(userId: string, role: Role): string {
-  return jwt.sign({ userId, role }, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN
-  } as jwt.SignOptions);
-}
+// Look up the Prisma user that corresponds to the current Clerk session.
+// - Clerk is the source of truth for authentication and for the role
+//   (set in publicMetadata.role during seed-clerk-users).
+// - Prisma User.id is still the FK target used across the data model,
+//   so we link via User.clerkId.
+export async function getSessionUser(): Promise<ResolvedSessionUser | null> {
+  const { userId: clerkId } = await auth();
+  if (!clerkId) return null;
 
-export function verifyToken(token: string): TokenPayload | null {
+  // Read role + optional prismaUserId from Clerk publicMetadata.
+  let role: Role | null = null;
+  let prismaUserId: string | null = null;
+  let clerkEmail: string | null = null;
+  let clerkName = "";
+
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
-    return decoded;
+    const client = await clerkClient();
+    const u = await client.users.getUser(clerkId);
+    role = ((u.publicMetadata as any)?.role ?? null) as Role | null;
+    prismaUserId = ((u.publicMetadata as any)?.prismaUserId ?? null) as string | null;
+    clerkEmail =
+      u.emailAddresses?.find((e) => e.id === u.primaryEmailAddressId)?.emailAddress ||
+      u.emailAddresses?.[0]?.emailAddress ||
+      null;
+    clerkName = [u.firstName, u.lastName].filter(Boolean).join(" ") || clerkEmail || "";
   } catch {
+    // Clerk unreachable (e.g. bad keys in local dev) — treat as anonymous.
     return null;
   }
+
+  if (!role) return null;
+
+  // Prefer explicit Prisma id from publicMetadata; fall back to clerkId lookup.
+  let user = prismaUserId
+    ? await prisma.user.findUnique({ where: { id: prismaUserId } })
+    : await prisma.user.findUnique({ where: { clerkId } });
+
+  if (!user && clerkEmail) {
+    // Last-resort fallback: match by email (useful the first time a user
+    // signs in via Clerk before seed-clerk-users has linked them back).
+    user = await prisma.user.findUnique({ where: { email: clerkEmail } });
+    if (user && !user.clerkId) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { clerkId }
+      });
+    }
+  }
+
+  if (!user) return null;
+
+  return {
+    id: user.id,
+    clerkId,
+    email: user.email,
+    name: user.name || clerkName,
+    role,
+    companyName: user.companyName
+  };
 }
 
-function extractToken(request: NextRequest | Request): string | null {
-  const auth = request.headers.get("authorization");
-  if (auth && auth.startsWith("Bearer ")) return auth.substring(7);
-
-  // Fallback: cookie named "token" (UI uses localStorage + Authorization header,
-  // but middleware checks cookie as backup)
-  const cookie = request.headers.get("cookie") || "";
-  const match = cookie.match(/(?:^|;\s*)token=([^;]+)/);
-  if (match) return decodeURIComponent(match[1]);
-  return null;
-}
-
-export async function getSessionUser(request: NextRequest | Request) {
-  const token = extractToken(request);
-  if (!token) return null;
-  const payload = verifyToken(token);
-  if (!payload) return null;
-  const user = await prisma.user.findUnique({ where: { id: payload.userId } });
-  return user;
+export async function getUserRole(clerkId: string): Promise<Role | null> {
+  const client = await clerkClient();
+  const u = await client.users.getUser(clerkId);
+  return ((u.publicMetadata as any)?.role ?? null) as Role | null;
 }
 
 export function requireRole(

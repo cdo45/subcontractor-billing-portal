@@ -3,19 +3,19 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String
-  role         String // "admin" | "pm" | "subcontractor"
-  companyName  String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(cuid())
+  clerkId     String?  @unique
+  email       String   @unique
+  name        String
+  role        String // "admin" | "pm" | "subcontractor"
+  companyName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   managedProjects Project[]       @relation("PMProjects")
   subContracts    Contract[]      @relation("SubContracts")

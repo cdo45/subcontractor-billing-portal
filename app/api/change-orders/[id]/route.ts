@@ -8,7 +8,7 @@ export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const user = await getSessionUser(request);
+  const user = await getSessionUser();
   if (!user) return apiResponse(null, "Unauthorized", 401);
 
   const co = await prisma.changeOrder.findUnique({
@@ -26,7 +26,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const user = await getSessionUser(request);
+  const user = await getSessionUser();
   if (!user) return apiResponse(null, "Unauthorized", 401);
 
   const co = await prisma.changeOrder.findUnique({ where: { id: params.id } });

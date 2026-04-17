@@ -8,7 +8,7 @@ export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const user = await getSessionUser(request);
+  const user = await getSessionUser();
   if (!user) return apiResponse(null, "Unauthorized", 401);
 
   const where: any = { projectId: params.id };
@@ -46,7 +46,7 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const user = await getSessionUser(request);
+  const user = await getSessionUser();
   if (!user) return apiResponse(null, "Unauthorized", 401);
 
   try {

@@ -14,7 +14,7 @@ export async function GET(
   request: Request,
   { params }: { params: { periodId: string } }
 ) {
-  const user = await getSessionUser(request);
+  const user = await getSessionUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
 
   const url = new URL(request.url);

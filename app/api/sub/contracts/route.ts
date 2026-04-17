@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 // Returns all contracts assigned to the current sub, with current billing status
 export async function GET(request: Request) {
-  const user = await getSessionUser(request);
+  const user = await getSessionUser();
   const check = requireRole(user, ["subcontractor"]);
   if (!check.ok) return apiResponse(null, check.error!, check.status);
 

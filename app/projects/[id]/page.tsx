@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { api, requireRoleOnMount } from "@/lib/client";
+import { api } from "@/lib/client";
+import { useSessionWithRole } from "@/lib/useSession";
 import Header from "@/components/Header";
 import StatusBadge from "@/components/StatusBadge";
 import BillingReviewModal from "@/components/BillingReviewModal";
@@ -12,6 +13,7 @@ import { fmtUSD, fmtPct, fmtQty } from "@/lib/calc";
 export default function ProjectDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
+  const session = useSessionWithRole(["admin", "pm"]);
   const [tab, setTab] = useState<"overview" | "billing" | "change_orders" | "contracts">("overview");
   const [data, setData] = useState<any>(null);
   const [reviewingPeriod, setReviewingPeriod] = useState<string | null>(null);
@@ -26,10 +28,9 @@ export default function ProjectDetailPage() {
   }
 
   useEffect(() => {
-    const s = requireRoleOnMount(["admin", "pm"], (p) => router.push(p));
-    if (!s) return;
+    if (!session) return;
     load();
-  }, [router, params.id]);
+  }, [session, params.id]);
 
   if (loading) {
     return (

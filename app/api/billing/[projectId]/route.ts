@@ -8,7 +8,7 @@ export async function GET(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const user = await getSessionUser(request);
+  const user = await getSessionUser();
   if (!user) return apiResponse(null, "Unauthorized", 401);
 
   const where: any = { projectId: params.projectId };

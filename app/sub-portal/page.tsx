@@ -3,15 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api, loadSession, requireRoleOnMount } from "@/lib/client";
+import { api } from "@/lib/client";
+import { useSessionWithRole } from "@/lib/useSession";
 import Header from "@/components/Header";
 import StatusBadge from "@/components/StatusBadge";
 import { fmtUSD, fmtPct } from "@/lib/calc";
 
 export default function SubPortalPage() {
   const router = useRouter();
+  const session = useSessionWithRole(["subcontractor"]);
   const [contracts, setContracts] = useState<any[]>([]);
-  const [companyName, setCompanyName] = useState<string>("");
   const [busyContract, setBusyContract] = useState<string | null>(null);
 
   async function load() {
@@ -20,11 +21,11 @@ export default function SubPortalPage() {
   }
 
   useEffect(() => {
-    const s = requireRoleOnMount(["subcontractor"], (p) => router.push(p));
-    if (!s) return;
-    setCompanyName(s.companyName || s.name);
+    if (!session) return;
     load();
-  }, [router]);
+  }, [session]);
+
+  const companyName = session?.companyName || session?.name || "";
 
   async function startNewBilling(contractId: string) {
     const now = new Date();

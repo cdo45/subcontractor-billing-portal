@@ -1,24 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { clearSession, loadSession, SessionUser } from "@/lib/client";
+import { SignOutButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/client";
+
+interface MeResponse {
+  role: "admin" | "pm" | "subcontractor";
+  name: string;
+  email: string;
+  companyName: string | null;
+}
 
 export default function Header() {
-  const router = useRouter();
-  const [user, setUser] = useState<SessionUser | null>(null);
+  const { isLoaded, isSignedIn } = useUser();
+  const [me, setMe] = useState<MeResponse | null>(null);
 
   useEffect(() => {
-    setUser(loadSession());
-  }, []);
+    if (!isSignedIn) return;
+    api<MeResponse>("/api/auth/me").then((r) => {
+      if (r.data) setMe(r.data);
+    });
+  }, [isSignedIn]);
 
-  function logout() {
-    clearSession();
-    router.push("/login");
-  }
-
-  if (!user) return null;
+  if (!isLoaded || !isSignedIn || !me) return null;
 
   return (
     <header
@@ -33,7 +38,7 @@ export default function Header() {
     >
       <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
         <Link
-          href={user.role === "subcontractor" ? "/sub-portal" : "/dashboard"}
+          href={me.role === "subcontractor" ? "/sub-portal" : "/dashboard"}
           style={{
             fontFamily: "ui-monospace, monospace",
             fontWeight: 700,
@@ -44,7 +49,7 @@ export default function Header() {
           VANCE CORP
         </Link>
         <nav style={{ display: "flex", gap: 18, fontSize: 13 }}>
-          {user.role !== "subcontractor" && (
+          {me.role !== "subcontractor" && (
             <>
               <Link href="/dashboard" style={{ color: "var(--text-secondary)" }}>
                 Dashboard
@@ -54,7 +59,7 @@ export default function Header() {
               </Link>
             </>
           )}
-          {user.role === "subcontractor" && (
+          {me.role === "subcontractor" && (
             <Link href="/sub-portal" style={{ color: "var(--text-secondary)" }}>
               My Projects
             </Link>
@@ -63,14 +68,14 @@ export default function Header() {
       </div>
       <div style={{ display: "flex", gap: 16, alignItems: "center", fontSize: 13 }}>
         <div style={{ textAlign: "right" }}>
-          <div style={{ color: "var(--text-primary)" }}>{user.companyName || user.name}</div>
+          <div style={{ color: "var(--text-primary)" }}>{me.companyName || me.name}</div>
           <div style={{ color: "var(--text-muted)", fontSize: 11 }}>
-            {user.email} — {user.role.toUpperCase()}
+            {me.email} — {me.role.toUpperCase()}
           </div>
         </div>
-        <button className="btn" onClick={logout}>
-          Sign out
-        </button>
+        <SignOutButton redirectUrl="/login">
+          <button className="btn">Sign out</button>
+        </SignOutButton>
       </div>
     </header>
   );

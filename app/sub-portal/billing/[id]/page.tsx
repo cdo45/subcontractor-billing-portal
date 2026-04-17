@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { api, requireRoleOnMount } from "@/lib/client";
+import { api } from "@/lib/client";
+import { useSessionWithRole } from "@/lib/useSession";
 import Header from "@/components/Header";
 import StatusBadge from "@/components/StatusBadge";
 import ChangeOrderForm from "@/components/ChangeOrderForm";
@@ -11,6 +12,7 @@ import { fmtUSD, fmtPct, fmtQty, computeBillingValues } from "@/lib/calc";
 export default function SubBillingEntryPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
+  const session = useSessionWithRole(["subcontractor"]);
   const [period, setPeriod] = useState<any>(null);
   const [lineItems, setLineItems] = useState<any[]>([]);
   const [notes, setNotes] = useState("");
@@ -29,10 +31,9 @@ export default function SubBillingEntryPage() {
   }
 
   useEffect(() => {
-    const s = requireRoleOnMount(["subcontractor"], (p) => router.push(p));
-    if (!s) return;
+    if (!session) return;
     load();
-  }, [router, params.id]);
+  }, [session, params.id]);
 
   function updateRow(id: string, patch: any) {
     setLineItems((prev) =>

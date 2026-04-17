@@ -2,22 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, requireRoleOnMount } from "@/lib/client";
+import { api } from "@/lib/client";
+import { useSessionWithRole } from "@/lib/useSession";
 import Header from "@/components/Header";
 import StatusBadge from "@/components/StatusBadge";
 import { fmtUSD, fmtPct } from "@/lib/calc";
 
 export default function ProjectsListPage() {
   const router = useRouter();
+  const session = useSessionWithRole(["admin", "pm"]);
   const [projects, setProjects] = useState<any[]>([]);
 
   useEffect(() => {
-    const s = requireRoleOnMount(["admin", "pm"], (p) => router.push(p));
-    if (!s) return;
+    if (!session) return;
     api<any[]>("/api/projects").then((r) => {
       if (r.data) setProjects(r.data);
     });
-  }, [router]);
+  }, [session]);
 
   return (
     <>

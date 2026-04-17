@@ -1,7 +1,9 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+// Seeds Prisma data only. Clerk users + role metadata are seeded
+// separately by scripts/seed-clerk-users.ts — run that AFTER this.
 
 async function main() {
   console.log("Clearing existing data...");
@@ -14,13 +16,10 @@ async function main() {
   await prisma.project.deleteMany();
   await prisma.user.deleteMany();
 
-  const hash = await bcrypt.hash("test1234", 10);
-
   console.log("Seeding users...");
   const admin = await prisma.user.create({
     data: {
       email: "admin@vance.com",
-      passwordHash: hash,
       name: "Admin User",
       role: "admin"
     }
@@ -29,7 +28,6 @@ async function main() {
   const pm1 = await prisma.user.create({
     data: {
       email: "pm1@vance.com",
-      passwordHash: hash,
       name: "Pat Martinez",
       role: "pm"
     }
@@ -38,7 +36,6 @@ async function main() {
   const pm2 = await prisma.user.create({
     data: {
       email: "pm2@vance.com",
-      passwordHash: hash,
       name: "Morgan Lee",
       role: "pm"
     }
@@ -47,7 +44,6 @@ async function main() {
   const sub1 = await prisma.user.create({
     data: {
       email: "sub1@acme.com",
-      passwordHash: hash,
       name: "Alex Contractor",
       role: "subcontractor",
       companyName: "Acme Construction"
@@ -57,7 +53,6 @@ async function main() {
   const sub2 = await prisma.user.create({
     data: {
       email: "sub2@paving.com",
-      passwordHash: hash,
       name: "Priya Singh",
       role: "subcontractor",
       companyName: "Elite Paving Co"
@@ -67,7 +62,6 @@ async function main() {
   const sub3 = await prisma.user.create({
     data: {
       email: "sub3@grading.com",
-      passwordHash: hash,
       name: "Jordan Reyes",
       role: "subcontractor",
       companyName: "Titan Grading & Excavation"
@@ -76,7 +70,6 @@ async function main() {
 
   console.log("Seeding projects...");
 
-  // Active Project 1: City of Franklin — Main Street Rehab
   const proj1 = await prisma.project.create({
     data: {
       projectNumber: "VC-2026-001",
@@ -90,7 +83,6 @@ async function main() {
     }
   });
 
-  // Active Project 2: Dakota County — Highway 52 Expansion
   const proj2 = await prisma.project.create({
     data: {
       projectNumber: "VC-2026-002",
@@ -104,7 +96,6 @@ async function main() {
     }
   });
 
-  // Completed project
   const proj3 = await prisma.project.create({
     data: {
       projectNumber: "VC-2025-017",
@@ -120,7 +111,6 @@ async function main() {
 
   console.log("Seeding contracts and line items...");
 
-  // Proj1 — Sub1 (Acme Construction) — concrete work — lump sum
   const c1 = await prisma.contract.create({
     data: {
       projectId: proj1.id,
@@ -129,43 +119,17 @@ async function main() {
       description: "Concrete curbs, gutters, and sidewalks",
       lineItems: {
         create: [
-          {
-            itemNumber: "01",
-            description: "Mobilization & Demobilization",
-            contractType: "lump_sum",
-            scheduledValue: 25000
-          },
-          {
-            itemNumber: "02",
-            description: "Concrete Curb & Gutter (new install)",
-            contractType: "lump_sum",
-            scheduledValue: 185000
-          },
-          {
-            itemNumber: "03",
-            description: "Concrete Sidewalk Replacement",
-            contractType: "lump_sum",
-            scheduledValue: 140000
-          },
-          {
-            itemNumber: "04",
-            description: "ADA Ramp Construction",
-            contractType: "lump_sum",
-            scheduledValue: 70000
-          },
-          {
-            itemNumber: "05",
-            description: "Final Cleanup & Restoration",
-            contractType: "lump_sum",
-            scheduledValue: 30000
-          }
+          { itemNumber: "01", description: "Mobilization & Demobilization", contractType: "lump_sum", scheduledValue: 25000 },
+          { itemNumber: "02", description: "Concrete Curb & Gutter (new install)", contractType: "lump_sum", scheduledValue: 185000 },
+          { itemNumber: "03", description: "Concrete Sidewalk Replacement", contractType: "lump_sum", scheduledValue: 140000 },
+          { itemNumber: "04", description: "ADA Ramp Construction", contractType: "lump_sum", scheduledValue: 70000 },
+          { itemNumber: "05", description: "Final Cleanup & Restoration", contractType: "lump_sum", scheduledValue: 30000 }
         ]
       }
     },
     include: { lineItems: true }
   });
 
-  // Proj1 — Sub2 (Elite Paving) — paving — unit price
   const c2 = await prisma.contract.create({
     data: {
       projectId: proj1.id,
@@ -174,46 +138,16 @@ async function main() {
       description: "Asphalt paving and striping",
       lineItems: {
         create: [
-          {
-            itemNumber: "01",
-            description: "Asphalt Base Course",
-            contractType: "unit_price",
-            unit: "TON",
-            unitPrice: 95,
-            scheduledQty: 4000,
-            scheduledValue: 380000
-          },
-          {
-            itemNumber: "02",
-            description: "Asphalt Surface Course",
-            contractType: "unit_price",
-            unit: "TON",
-            unitPrice: 110,
-            scheduledQty: 2600,
-            scheduledValue: 286000
-          },
-          {
-            itemNumber: "03",
-            description: "Pavement Marking",
-            contractType: "unit_price",
-            unit: "LF",
-            unitPrice: 2.8,
-            scheduledQty: 25000,
-            scheduledValue: 70000
-          },
-          {
-            itemNumber: "04",
-            description: "Traffic Control",
-            contractType: "lump_sum",
-            scheduledValue: 44000
-          }
+          { itemNumber: "01", description: "Asphalt Base Course", contractType: "unit_price", unit: "TON", unitPrice: 95, scheduledQty: 4000, scheduledValue: 380000 },
+          { itemNumber: "02", description: "Asphalt Surface Course", contractType: "unit_price", unit: "TON", unitPrice: 110, scheduledQty: 2600, scheduledValue: 286000 },
+          { itemNumber: "03", description: "Pavement Marking", contractType: "unit_price", unit: "LF", unitPrice: 2.8, scheduledQty: 25000, scheduledValue: 70000 },
+          { itemNumber: "04", description: "Traffic Control", contractType: "lump_sum", scheduledValue: 44000 }
         ]
       }
     },
     include: { lineItems: true }
   });
 
-  // Proj2 — Sub3 (Titan Grading) — earthwork — unit price
   const c3 = await prisma.contract.create({
     data: {
       projectId: proj2.id,
@@ -222,43 +156,16 @@ async function main() {
       description: "Site grading, excavation, and embankment",
       lineItems: {
         create: [
-          {
-            itemNumber: "01",
-            description: "Clearing & Grubbing",
-            contractType: "lump_sum",
-            scheduledValue: 85000
-          },
-          {
-            itemNumber: "02",
-            description: "Common Excavation",
-            contractType: "unit_price",
-            unit: "CY",
-            unitPrice: 12.5,
-            scheduledQty: 42000,
-            scheduledValue: 525000
-          },
-          {
-            itemNumber: "03",
-            description: "Borrow Embankment",
-            contractType: "unit_price",
-            unit: "CY",
-            unitPrice: 18,
-            scheduledQty: 28000,
-            scheduledValue: 504000
-          },
-          {
-            itemNumber: "04",
-            description: "Erosion Control",
-            contractType: "lump_sum",
-            scheduledValue: 136000
-          }
+          { itemNumber: "01", description: "Clearing & Grubbing", contractType: "lump_sum", scheduledValue: 85000 },
+          { itemNumber: "02", description: "Common Excavation", contractType: "unit_price", unit: "CY", unitPrice: 12.5, scheduledQty: 42000, scheduledValue: 525000 },
+          { itemNumber: "03", description: "Borrow Embankment", contractType: "unit_price", unit: "CY", unitPrice: 18, scheduledQty: 28000, scheduledValue: 504000 },
+          { itemNumber: "04", description: "Erosion Control", contractType: "lump_sum", scheduledValue: 136000 }
         ]
       }
     },
     include: { lineItems: true }
   });
 
-  // Proj2 — Sub2 (Elite Paving) — HMA paving — unit price
   const c4 = await prisma.contract.create({
     data: {
       projectId: proj2.id,
@@ -267,45 +174,11 @@ async function main() {
       description: "Hot mix asphalt paving, HW52 mainline and shoulders",
       lineItems: {
         create: [
-          {
-            itemNumber: "01",
-            description: "HMA Base, Type B",
-            contractType: "unit_price",
-            unit: "TON",
-            unitPrice: 98,
-            scheduledQty: 9500,
-            scheduledValue: 931000
-          },
-          {
-            itemNumber: "02",
-            description: "HMA Surface, Type C",
-            contractType: "unit_price",
-            unit: "TON",
-            unitPrice: 112,
-            scheduledQty: 6200,
-            scheduledValue: 694400
-          },
-          {
-            itemNumber: "03",
-            description: "Tack Coat",
-            contractType: "unit_price",
-            unit: "GAL",
-            unitPrice: 3.25,
-            scheduledQty: 8000,
-            scheduledValue: 26000
-          },
-          {
-            itemNumber: "04",
-            description: "Pavement Striping & Markings",
-            contractType: "lump_sum",
-            scheduledValue: 122600
-          },
-          {
-            itemNumber: "05",
-            description: "Traffic Control & MOT",
-            contractType: "lump_sum",
-            scheduledValue: 76000
-          }
+          { itemNumber: "01", description: "HMA Base, Type B", contractType: "unit_price", unit: "TON", unitPrice: 98, scheduledQty: 9500, scheduledValue: 931000 },
+          { itemNumber: "02", description: "HMA Surface, Type C", contractType: "unit_price", unit: "TON", unitPrice: 112, scheduledQty: 6200, scheduledValue: 694400 },
+          { itemNumber: "03", description: "Tack Coat", contractType: "unit_price", unit: "GAL", unitPrice: 3.25, scheduledQty: 8000, scheduledValue: 26000 },
+          { itemNumber: "04", description: "Pavement Striping & Markings", contractType: "lump_sum", scheduledValue: 122600 },
+          { itemNumber: "05", description: "Traffic Control & MOT", contractType: "lump_sum", scheduledValue: 76000 }
         ]
       }
     },
@@ -314,7 +187,6 @@ async function main() {
 
   console.log("Seeding a submitted billing period for PM review...");
 
-  // A submitted billing period on c1 (Sub1 / Proj1) — awaiting PM approval
   const bp1 = await prisma.billingPeriod.create({
     data: {
       projectId: proj1.id,
@@ -328,9 +200,8 @@ async function main() {
     }
   });
 
-  const c1Items = c1.lineItems;
   const mkBLI = async (
-    lineItem: (typeof c1Items)[number],
+    lineItem: (typeof c1.lineItems)[number],
     pct: number
   ) => {
     const sv = Number(lineItem.scheduledValue);
@@ -346,14 +217,12 @@ async function main() {
       }
     });
   };
+  await mkBLI(c1.lineItems[0], 100);
+  await mkBLI(c1.lineItems[1], 35);
+  await mkBLI(c1.lineItems[2], 15);
+  await mkBLI(c1.lineItems[3], 0);
+  await mkBLI(c1.lineItems[4], 0);
 
-  await mkBLI(c1Items[0], 100); // Mobilization
-  await mkBLI(c1Items[1], 35); // Curb & Gutter
-  await mkBLI(c1Items[2], 15); // Sidewalk
-  await mkBLI(c1Items[3], 0);
-  await mkBLI(c1Items[4], 0);
-
-  // Approved billing period for c2 (Sub2 / Proj1) — period 2 2026
   const bp2 = await prisma.billingPeriod.create({
     data: {
       projectId: proj1.id,
@@ -367,9 +236,7 @@ async function main() {
     }
   });
 
-  const c2Items = c2.lineItems;
-  // Unit price items
-  const bliUP = async (li: (typeof c2Items)[number], qty: number) => {
+  const bliUP = async (li: (typeof c2.lineItems)[number], qty: number) => {
     const up = Number(li.unitPrice || 0);
     const sv = Number(li.scheduledValue);
     const value = up * qty;
@@ -385,16 +252,16 @@ async function main() {
       }
     });
   };
-  await bliUP(c2Items[0], 850); // Base course 850 TON
-  await bliUP(c2Items[1], 0);
-  await bliUP(c2Items[2], 0);
-  // Lump sum traffic control 20%
-  const tcSv = Number(c2Items[3].scheduledValue);
+  await bliUP(c2.lineItems[0], 850);
+  await bliUP(c2.lineItems[1], 0);
+  await bliUP(c2.lineItems[2], 0);
+
+  const tcSv = Number(c2.lineItems[3].scheduledValue);
   const tcVal = tcSv * 0.2;
   await prisma.billingLineItem.create({
     data: {
       billingPeriodId: bp2.id,
-      lineItemId: c2Items[3].id,
+      lineItemId: c2.lineItems[3].id,
       percentComplete: 20,
       valueThisPeriod: tcVal,
       valueCumulative: tcVal,
@@ -414,7 +281,6 @@ async function main() {
 
   console.log("Seeding change orders...");
 
-  // Proj1 — sub-initiated CO pending approval
   await prisma.changeOrder.create({
     data: {
       projectId: proj1.id,
@@ -430,7 +296,6 @@ async function main() {
     }
   });
 
-  // Proj1 — PM-approved CO, pending customer
   await prisma.changeOrder.create({
     data: {
       projectId: proj1.id,
@@ -445,7 +310,6 @@ async function main() {
     }
   });
 
-  // Proj2 — customer-approved CO
   await prisma.changeOrder.create({
     data: {
       projectId: proj2.id,
@@ -460,7 +324,6 @@ async function main() {
     }
   });
 
-  // Proj2 — rejected CO
   await prisma.changeOrder.create({
     data: {
       projectId: proj2.id,
@@ -475,7 +338,7 @@ async function main() {
     }
   });
 
-  console.log("Seed complete.");
+  console.log("Prisma seed complete. Now run:  npx tsx scripts/seed-clerk-users.ts");
 }
 
 main()

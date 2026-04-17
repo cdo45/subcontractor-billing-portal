@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const user = await getSessionUser(request);
+  const user = await getSessionUser();
   const check = requireRole(user, ["admin", "pm"]);
   if (!check.ok) return apiResponse(null, check.error!, check.status);
 
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const user = await getSessionUser(request);
+  const user = await getSessionUser();
   const check = requireRole(user, ["admin"]);
   if (!check.ok) return apiResponse(null, check.error!, check.status);
 

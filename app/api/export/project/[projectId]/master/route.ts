@@ -15,7 +15,7 @@ export async function GET(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const user = await getSessionUser(request);
+  const user = await getSessionUser();
   const check = requireRole(user, ["admin", "pm"]);
   if (!check.ok) return new Response(check.error, { status: check.status });
 

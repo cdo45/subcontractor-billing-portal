@@ -8,7 +8,7 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const user = await getSessionUser(request);
+  const user = await getSessionUser();
   if (!user) return apiResponse(null, "Unauthorized", 401);
 
   const bp = await prisma.billingPeriod.findUnique({ where: { id: params.id } });

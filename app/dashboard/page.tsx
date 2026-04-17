@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api, requireRoleOnMount } from "@/lib/client";
+import { api } from "@/lib/client";
+import { useSessionWithRole } from "@/lib/useSession";
 import Header from "@/components/Header";
 import StatusBadge from "@/components/StatusBadge";
 import { fmtUSD, fmtPct } from "@/lib/calc";
@@ -41,21 +42,13 @@ interface Summary {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const session = useSessionWithRole(["admin", "pm"]);
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [pendingExtras, setPendingExtras] = useState<{ pendingBillings: number; pendingCOs: number } | null>(null);
 
   useEffect(() => {
-    const s = requireRoleOnMount(["admin", "pm"], (p) => router.push(p));
-    if (!s) return;
+    if (!session) return;
     api<Summary>("/api/dashboard/summary").then((r) => setSummary(r.data));
-    api<any[]>("/api/projects").then((r) => {
-      if (!r.data) return;
-      setPendingExtras({
-        pendingBillings: r.data.reduce((s: number, p: any) => s + p.pendingBillings, 0),
-        pendingCOs: r.data.reduce((s: number, p: any) => s + p.pendingCOs, 0)
-      });
-    });
-  }, [router]);
+  }, [session]);
 
   if (!summary) {
     return (

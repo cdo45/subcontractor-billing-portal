@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const user = await getSessionUser(request);
+  const user = await getSessionUser();
   if (!user) return apiResponse(null, "Unauthorized", 401);
   return apiResponse({
     userId: user.id,

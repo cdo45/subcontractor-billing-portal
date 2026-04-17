@@ -1,26 +1,72 @@
-import { NextRequest, NextResponse } from "next/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-// Middleware here only guards the UI page paths for simple redirects.
-// Page-level and API-level auth enforcement is done inside each route
-// using `getSessionUser` + `requireRole` (Edge runtime can't use bcrypt/prisma).
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+// Public routes — anyone can access
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/login(.*)",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/after-login(.*)"
+]);
 
-  // Allow public paths
-  const publicPaths = ["/login", "/api/auth/login", "/_next", "/favicon.ico"];
-  if (publicPaths.some((p) => pathname.startsWith(p))) {
-    return NextResponse.next();
+// PM/Admin-only routes
+const isPmAdminRoute = createRouteMatcher([
+  "/dashboard(.*)",
+  "/projects(.*)"
+]);
+
+// Subcontractor-only routes
+const isSubRoute = createRouteMatcher(["/sub-portal(.*)"]);
+
+// API routes — role checks happen in each route handler
+const isApiRoute = createRouteMatcher(["/api/(.*)"]);
+
+export default clerkMiddleware(async (auth, req) => {
+  if (isPublicRoute(req)) return;
+
+  const { userId, sessionClaims } = await auth();
+
+  // Require auth for everything else
+  if (!userId) {
+    if (isApiRoute(req)) {
+      return NextResponse.json(
+        { data: null, error: "Unauthorized", status: 401 },
+        { status: 401 }
+      );
+    }
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
   }
 
-  // API routes handle their own auth
-  if (pathname.startsWith("/api/")) return NextResponse.next();
+  // Role check for UI routes. sessionClaims can carry publicMetadata.role
+  // if the Clerk JWT template is configured to include it — fall back to
+  // letting the page-level component re-check against Clerk if absent.
+  const role = (sessionClaims?.metadata as any)?.role as string | undefined;
 
-  // For UI pages, the client-side pages check the token in localStorage.
-  // We keep middleware minimal here to avoid the edge/node runtime collision
-  // with bcrypt/prisma in auth verification.
-  return NextResponse.next();
-}
+  if (isPmAdminRoute(req)) {
+    if (role && !["admin", "pm"].includes(role)) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/sub-portal";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  if (isSubRoute(req)) {
+    if (role && role !== "subcontractor") {
+      const url = req.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
+  }
+});
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"]
+  matcher: [
+    // Skip Next.js internals and all static files, unless found in search params
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // Always run for API routes
+    "/(api|trpc)(.*)"
+  ]
 };

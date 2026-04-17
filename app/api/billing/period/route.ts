@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 // Create a new draft billing period (sub only) for a given contract & month
 export async function POST(request: Request) {
-  const user = await getSessionUser(request);
+  const user = await getSessionUser();
   const check = requireRole(user, ["subcontractor"]);
   if (!check.ok) return apiResponse(null, check.error!, check.status);
 
